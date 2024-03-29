@@ -75,31 +75,28 @@ public class SqlEditor : TextView
     };
 
     private readonly string _path = "RuneCells.rce";
-    private ColorScheme _blue;
-    private ColorScheme _green;
-    private ColorScheme _magenta;
-    private ColorScheme _white;
+
 
     public SqlEditor()
     {
         ApplySyntaxHighlighting();
     }
 
+    public void Format()
+    {
+        Text = new Formatter(Text).Format();
+    }
     private void ApplySyntaxHighlighting()
     {
         ClearAllEvents();
 
-        var colours = (Dictionary<string, ColorScheme>)ThemeManager.Instance[ThemeManager.Instance.Theme]["ColorSchemes"].RetrieveValue();
-        var colorSchemeNormal = colours["TopLevel"].Normal;
+        
+        //var colours = (Dictionary<string, ColorScheme>)ThemeManager.Instance[ThemeManager.Instance.Theme]["ColorSchemes"].RetrieveValue();
+        //var colorSchemeNormal = colours["TopLevel"].Normal;
 
-        var background = Color.DarkGray;
-        _green = new ColorScheme(new Terminal.Gui.Attribute(Color.Green, background));
-        _blue = new ColorScheme(new Terminal.Gui.Attribute(Color.Blue, background));
-        _magenta = new ColorScheme(new Terminal.Gui.Attribute(Color.Magenta, background));
-        _white = new ColorScheme(new Terminal.Gui.Attribute(colorSchemeNormal.Foreground, background));
 
-        this.DesiredCursorVisibility = CursorVisibility.Vertical;
-        //ColorScheme = _white;
+        this.DesiredCursorVisibility = CursorVisibility.Box;
+        ColorScheme = Theme.TextColor;
         Text = "/*Query to select:\nLots of data*/\nSELECT TOP 100 * \nfrom\n MyDb.dbo.Biochemistry where TestCode = 'blah';";
 
         Autocomplete.SuggestionGenerator = new SingleWordSuggestionGenerator
@@ -151,19 +148,19 @@ public class SqlEditor : TextView
             {
                 if (commentMatches.Any(m => ContainsPosition(m, pos)))
                 {
-                    line[x].ColorScheme = _green;
+                    line[x].ColorScheme = Theme.CommentColor;
                 }
                 else if (singleQuoteMatches.Any(m => ContainsPosition(m, pos)))
                 {
-                    line[x].ColorScheme = _magenta;
+                    line[x].ColorScheme = Theme.StringColor;
                 }
                 else if (keywordMatches.Any(m => ContainsPosition(m, pos)))
                 {
-                    line[x].ColorScheme = _blue;
+                    line[x].ColorScheme = Theme.KeywordColor;
                 }
                 else
                 {
-                    line[x].ColorScheme = _white;
+                    line[x].ColorScheme = Theme.TextColor;
                 }
 
                 pos++;
