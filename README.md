@@ -1,0 +1,2 @@
+# easysql
+mini sql ide
