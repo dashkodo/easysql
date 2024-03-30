@@ -5,15 +5,18 @@ namespace EasySql;
 
 public class PlaygroundSqlServer
 {
+    private static string localConnectionString;
     private static MsSqlContainer container;
 
     public static async Task Init()
     {
-        container = await CreateSqlServerContainer();
+        localConnectionString = ""; // TODO: Load from config
+        if(localConnectionString == null)
+            container = await CreateSqlServerContainer();
     }
 
     public static string ConnectionString =>
-        container?.GetConnectionString() ?? throw new InvalidOperationException("Run Init method first");
+        localConnectionString ?? container?.GetConnectionString() ?? throw new InvalidOperationException("Run Init method first");
 
     private static async Task<MsSqlContainer> CreateSqlServerContainer()
     {

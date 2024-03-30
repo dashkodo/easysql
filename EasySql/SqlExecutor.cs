@@ -5,6 +5,13 @@ namespace EasySql;
 
 public class SqlExecutor(string connectionString)
 {
+    public DataTable GetSchema()
+    {
+        return ExecuteQuery("""
+             select TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME
+             from INFORMATION_SCHEMA.COLUMNS
+             """);
+    }
 
     public DataTable ExecuteQuery(string commandText)
     {

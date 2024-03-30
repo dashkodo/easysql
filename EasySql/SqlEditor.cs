@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Data;
+using System.Text;
 using System.Text.RegularExpressions;
 using Terminal.Gui;
 using Attribute = Terminal.Gui.Attribute;
@@ -7,7 +8,7 @@ namespace EasySql;
 
 class SqlEditor : TextView
 {
-    private HashSet<string> keywords = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+ 
     private Attribute blue;
     private Attribute white;
     private Attribute magenta;
@@ -23,9 +24,9 @@ class SqlEditor : TextView
         return base.OnEnter(view);
     }
 
-    public SqlEditor(): base()
+    public SqlEditor(IAutocomplete autocomplete) : base()
     {
-
+        this.Autocomplete = autocomplete;
     }
 
     public void Init(Action executeCommand)
@@ -38,74 +39,8 @@ class SqlEditor : TextView
         });
         ClearKeybinding(Key.e | Key.CtrlMask);
         ClearKeybinding(Key.f | Key.CtrlMask);
-        AddKeyBinding(Key.e | Key.CtrlMask, Command.Refresh);
-        AddKeyBinding(Key.f | Key.CtrlMask, Command.Refresh);
-        keywords.Add("select");
-        keywords.Add("distinct");
-        keywords.Add("top");
-        keywords.Add("from");
-        keywords.Add("create");
-        keywords.Add("CIPHER");
-        keywords.Add("CLASS_ORIGIN");
-        keywords.Add("CLIENT");
-        keywords.Add("CLOSE");
-        keywords.Add("COALESCE");
-        keywords.Add("CODE");
-        keywords.Add("COLUMNS");
-        keywords.Add("COLUMN_FORMAT");
-        keywords.Add("COLUMN_NAME");
-        keywords.Add("COMMENT");
-        keywords.Add("COMMIT");
-        keywords.Add("COMPACT");
-        keywords.Add("COMPLETION");
-        keywords.Add("COMPRESSED");
-        keywords.Add("COMPRESSION");
-        keywords.Add("CONCURRENT");
-        keywords.Add("CONNECT");
-        keywords.Add("CONNECTION");
-        keywords.Add("CONSISTENT");
-        keywords.Add("CONSTRAINT_CATALOG");
-        keywords.Add("CONSTRAINT_SCHEMA");
-        keywords.Add("CONSTRAINT_NAME");
-        keywords.Add("CONTAINS");
-        keywords.Add("CONTEXT");
-        keywords.Add("CONTRIBUTORS");
-        keywords.Add("COPY");
-        keywords.Add("CPU");
-        keywords.Add("CURSOR_NAME");
-        keywords.Add("primary");
-        keywords.Add("key");
-        keywords.Add("insert");
-        keywords.Add("alter");
-        keywords.Add("add");
-        keywords.Add("update");
-        keywords.Add("set");
-        keywords.Add("delete");
-        keywords.Add("truncate");
-        keywords.Add("as");
-        keywords.Add("order");
-        keywords.Add("by");
-        keywords.Add("asc");
-        keywords.Add("desc");
-        keywords.Add("between");
-        keywords.Add("where");
-        keywords.Add("and");
-        keywords.Add("or");
-        keywords.Add("not");
-        keywords.Add("limit");
-        keywords.Add("null");
-        keywords.Add("is");
-        keywords.Add("drop");
-        keywords.Add("database");
-        keywords.Add("table");
-        keywords.Add("having");
-        keywords.Add("in");
-        keywords.Add("join");
-        keywords.Add("on");
-        keywords.Add("union");
-        keywords.Add("exists");
+        AddKeyBinding(Key.Enter | Key.CtrlMask, Command.Refresh);
 
-        Autocomplete.AllSuggestions = keywords.ToList();
 
         magenta = Driver.MakeAttribute(Color.Magenta, Color.Black);
         blue = Driver.MakeAttribute(Color.Cyan, Color.Black);
@@ -157,7 +92,7 @@ class SqlEditor : TextView
             return false;
         }
 
-        return keywords.Contains(word, StringComparer.CurrentCultureIgnoreCase);
+        return SqlAutocomplete.keywords.Contains(word, StringComparer.CurrentCultureIgnoreCase);
     }
 
     private string IdxToWord(List<System.Rune> line, int idx)
@@ -187,4 +122,6 @@ class SqlEditor : TextView
     {
         Text = new Formatter(Text.ToString()).Format();
     }
+
+   
 }

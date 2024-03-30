@@ -1,28 +1,33 @@
 ﻿using System.Data;
 using EasySql;
+using Microsoft.Data.SqlClient;
 using Terminal.Gui;
 using Testcontainers.MsSql;
 
 public class Layout : Toplevel
 {
-    TableView tableView = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(),  };
+    TableView tableView = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), };
     private readonly SqlEditor sqlEditor;
+
+    private SqlExecutor sqlExecutor =
+        new SqlExecutor(new SqlConnectionStringBuilder(PlaygroundSqlServer.ConnectionString)
+            { TrustServerCertificate = true }.ToString());
 
     public Layout()
     {
-        sqlEditor = new SqlEditor()
+        sqlEditor = new SqlEditor(new SqlAutocomplete(sqlExecutor))
         {
             CanFocus = true,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
         };
         
+
         sqlEditor.Init(ExecuteQuery);
         var statusBar = new StatusBar([
             new(Application.QuitKey, "~^Q~ Quit", () => RequestStop()),
             new(Key.CtrlMask | Key.f, "~^+F~ Format", () => sqlEditor.Format()),
             new(Key.CtrlMask | Key.e, "~^+E~ Execute", () => ExecuteQuery()),
-            
         ])
         {
             Visible = true
@@ -65,12 +70,15 @@ public class Layout : Toplevel
             CanFocus = false
         };
         bottomRightPane.Border.BorderStyle = BorderStyle.Rounded;
-        
+
         tableView.Style.ShowHorizontalHeaderOverline = true;
         tableView.Style.ShowVerticalHeaderLines = true;
         tableView.Style.ShowHorizontalHeaderUnderline = true;
         tableView.Style.ShowVerticalCellLines = true;
-
+        tableView.Border = new Border()
+        {
+            BorderStyle = BorderStyle.Rounded
+        };
         bottomRightPane.Add(tableView);
 
         Add(bottomRightPane);
@@ -78,7 +86,7 @@ public class Layout : Toplevel
 
     private void ExecuteQuery()
     {
-        SetData(new SqlExecutor(PlaygroundSqlServer.ConnectionString).ExecuteQuery(sqlEditor.Text.ToString()));
+        SetData(sqlExecutor.ExecuteQuery(sqlEditor.Text.ToString()));
     }
 
     public void SetData(DataTable dataTable)
