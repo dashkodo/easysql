@@ -7,9 +7,9 @@ public class Theme
 {
     private static Color backgroundColor = Color.Black;
 
-    public static ColorScheme KeywordColor => new ColorScheme(new Attribute(Color.BrightMagenta, backgroundColor));
+    public static Attribute KeywordColor => new Attribute(Color.BrightMagenta, backgroundColor);
 
-    public static ColorScheme CommentColor => new ColorScheme(new Attribute(Color.Green, backgroundColor));
-    public static ColorScheme StringColor => new ColorScheme(new Attribute(Color.BrightCyan, backgroundColor));
-    public static ColorScheme TextColor => new ColorScheme(new Attribute(Color.White, backgroundColor));
+    public static Attribute CommentColor => new Attribute(Color.Green, backgroundColor);
+    public static Attribute StringColor => new Attribute(Color.BrightCyan, backgroundColor);
+    public static Attribute TextColor => new Attribute(Color.White, backgroundColor);
 }

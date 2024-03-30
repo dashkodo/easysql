@@ -1,6 +1,6 @@
 using System.Text;
 
-class Formatter
+public class Formatter
 {
     static HashSet<string> BEGIN_CLAUSES = new HashSet<string>();
     static HashSet<string> END_CLAUSES = new HashSet<string>();
@@ -208,7 +208,8 @@ class Formatter
             }
         }
 
-        return result.ToString();
+        var resultString = result.ToString();
+        return string.Join('\n', resultString.Split('\n').Select(arg=>arg.TrimEnd()));
     }
 
     private void White()
@@ -277,10 +278,6 @@ class Formatter
         Out();
         indent++;
         beginLine = false;
-        if ("update".Equals(lcToken))
-        {
-            Newline();
-        }
 
         if ("insert".Equals(lcToken))
         {
@@ -320,7 +317,9 @@ class Formatter
             indent++;
         }
 
-        Newline();
+        White();
+        //Newline();
+        
         afterBeginBeforeEnd = false;
         afterByOrSetOrFromOrSelect = "by".Equals(lcToken)
                                      || "set".Equals(lcToken)
@@ -410,9 +409,9 @@ class Formatter
             return false;
         }
 
-        char begin = tok[0];
+        var begin = tok[0];
 
-        bool isIdentifier = (Char.IsLetter(begin) || begin == '$' || begin == '_') || '"' == begin;
+        var isIdentifier = (Char.IsLetter(begin) || begin == '$' || begin == '_') || '"' == begin;
         return isIdentifier &&
                LOGICAL.Contains(tok) == false &&
                END_CLAUSES.Contains(tok) == false &&
@@ -439,7 +438,7 @@ class Formatter
     private void Newline()
     {
         result.Append(Environment.NewLine);
-        for (int i = 0; i < indent; i++)
+        for (var i = 0; i < indent; i++)
         {
             result.Append(INDENT_STRING);
         }

@@ -1,23 +1,27 @@
 ﻿using System.Data;
 using EasySql;
 using Terminal.Gui;
+using Testcontainers.MsSql;
 
 public class Layout : Toplevel
 {
-    TableView tableView = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill() };
+    TableView tableView = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(),  };
+    private readonly SqlEditor sqlEditor;
 
     public Layout()
     {
-        var textView = new SqlEditor()
+        sqlEditor = new SqlEditor()
         {
             CanFocus = true,
             Width = Dim.Fill(),
             Height = Dim.Fill(),
         };
         
+        sqlEditor.Init(ExecuteQuery);
         var statusBar = new StatusBar([
             new(Application.QuitKey, "~^Q~ Quit", () => RequestStop()),
-            new(Key.F4, "~F4~ Format", () => textView.Format()),
+            new(Key.CtrlMask | Key.f, "~^+F~ Format", () => sqlEditor.Format()),
+            new(Key.CtrlMask | Key.e, "~^+E~ Execute", () => ExecuteQuery()),
             
         ])
         {
@@ -47,9 +51,8 @@ public class Layout : Toplevel
             Width = Dim.Fill(),
             Height = Dim.Percent(50),
         };
-        topRight.Border.LineStyle = LineStyle.Rounded;
-       
-        topRight.Add(textView);
+        topRight.Border.BorderStyle = BorderStyle.Rounded;
+        topRight.Add(sqlEditor);
         Add(topRight);
 
         var bottomRightPane = new FrameView()
@@ -61,14 +64,25 @@ public class Layout : Toplevel
             Height = Dim.Fill(1),
             CanFocus = false
         };
-        bottomRightPane.Border.LineStyle = LineStyle.Rounded;
+        bottomRightPane.Border.BorderStyle = BorderStyle.Rounded;
+        
+        tableView.Style.ShowHorizontalHeaderOverline = true;
+        tableView.Style.ShowVerticalHeaderLines = true;
+        tableView.Style.ShowHorizontalHeaderUnderline = true;
+        tableView.Style.ShowVerticalCellLines = true;
+
         bottomRightPane.Add(tableView);
 
         Add(bottomRightPane);
     }
 
+    private void ExecuteQuery()
+    {
+        SetData(new SqlExecutor(PlaygroundSqlServer.ConnectionString).ExecuteQuery(sqlEditor.Text.ToString()));
+    }
+
     public void SetData(DataTable dataTable)
     {
-        tableView.Table = new DataTableSource(dataTable);
+        tableView.Table = dataTable;
     }
 }
