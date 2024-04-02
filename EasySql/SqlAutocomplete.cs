@@ -77,25 +77,28 @@ public class SqlAutocomplete : TextViewAutocomplete
 
     public SqlAutocomplete(SqlExecutor sqlExecutor)
     {
-        var schema = sqlExecutor.GetSchema();
-        var columns = schema.Rows.Cast<DataRow>()
-            .Select(arg => new
-            {
-                CatalogName = arg["TABLE_CATALOG"],
-                SchemaName = arg["TABLE_SCHEMA"],
-                TableName = arg["TABLE_NAME"],
-                ColumnName = arg["COLUMN_NAME"],
-            });
+        new Thread(() =>
+        {
+            var schema = sqlExecutor.GetSchema();
+            var columns = schema.Rows.Cast<DataRow>()
+                    .Select(arg => new
+                    {
+                        CatalogName = arg["TABLE_CATALOG"],
+                        SchemaName = arg["TABLE_SCHEMA"],
+                        TableName = arg["TABLE_NAME"],
+                        ColumnName = arg["COLUMN_NAME"],
+                    });
+                
+                AllSuggestions.AddRange(
+                    columns.Select(arg => "." + arg.ColumnName).Distinct()
+                        .Concat(columns.Select(arg => arg.ColumnName).Distinct())
+                        .Concat(columns.Select(arg => arg.TableName).Distinct())
+                        .Concat(columns.Select(arg => arg.SchemaName).Distinct())
+                        .Concat(columns.Select(arg => arg.CatalogName).Distinct())
+                        .Cast<string>());
+            }).Start();
 
         this.MaxWidth = 50;
-        AllSuggestions = keywords
-            .Concat(columns.Select(arg => "." + arg.ColumnName).Distinct())
-            .Concat(columns.Select(arg => arg.ColumnName).Distinct())
-            .Concat(columns.Select(arg => arg.TableName).Distinct())
-            .Concat(columns.Select(arg => arg.SchemaName).Distinct())
-            .Concat(columns.Select(arg => arg.CatalogName).Distinct())
-            .Cast<string>()
-            .ToList();
     }
 
     protected override string IdxToWord(List<Rune> line, int idx, int columnOffset = 0)

@@ -5,6 +5,11 @@ namespace EasySql;
 
 public static class EventExtensions
 {
+    public static string LimitNumberOfRows(this string obj, int rowsNumber = 100)
+    {
+        return obj.Replace("select", $"select top {rowsNumber} ");
+    }
+
     public static void ClearEventHandlers(this object obj, string eventName)
     {
         if (obj == null)

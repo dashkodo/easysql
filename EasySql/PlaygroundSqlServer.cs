@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Testcontainers.MsSql;
+using Tomlyn;
+using Tomlyn.Model;
 
 namespace EasySql;
 
@@ -10,7 +12,14 @@ public class PlaygroundSqlServer
 
     public static async Task Init()
     {
-        localConnectionString = ""; // TODO: Load from config
+        var configFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".sqlconfig");
+
+        if (!File.Exists(configFilePath))
+            File.WriteAllBytes(configFilePath, []);
+        
+        var model = Toml.ToModel(File.ReadAllText(configFilePath));
+        var s = ((TomlTableArray)model["Databases"])[0]["ConnectionString"] as string;
+        localConnectionString = s; // TODO: Load from config
         if(localConnectionString == null)
             container = await CreateSqlServerContainer();
     }

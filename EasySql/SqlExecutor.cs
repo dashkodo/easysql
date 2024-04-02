@@ -17,7 +17,7 @@ public class SqlExecutor(string connectionString)
     {
         var dataTable = new DataTable();
         using var sqlConnection = new SqlConnection(connectionString);        
-        using var cmd = new SqlCommand(commandText, sqlConnection);
+        using var cmd = new SqlCommand(commandText.LimitNumberOfRows(), sqlConnection);
         sqlConnection.Open();
 
         // create data adapter
