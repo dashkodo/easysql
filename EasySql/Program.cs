@@ -2,7 +2,7 @@
 using Terminal.Gui;
 
 Console.WriteLine("initializing sql");
-await PlaygroundSqlServer.Init();
+await EasySql.ConfigManager.Init();
 Console.WriteLine("initialized sql");
 
 Application.Init();

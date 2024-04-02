@@ -80,6 +80,8 @@ public class SqlAutocomplete : TextViewAutocomplete
         new Thread(() =>
         {
             var schema = sqlExecutor.GetSchema();
+            if(!schema.Columns.Contains("TABLE_CATALOG"))
+                return;
             var columns = schema.Rows.Cast<DataRow>()
                     .Select(arg => new
                     {

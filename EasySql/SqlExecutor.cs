@@ -17,14 +17,15 @@ public class SqlExecutor(string connectionString)
     {
         var dataTable = new DataTable();
         using var sqlConnection = new SqlConnection(connectionString);        
-        using var cmd = new SqlCommand(commandText.LimitNumberOfRows(), sqlConnection);
-        sqlConnection.Open();
-
-        // create data adapter
-        using var sqlDataAdapter = new SqlDataAdapter(cmd);
-        // this will query your database and return the result to your datatable
+        
         try
         {
+            using var cmd = new SqlCommand(commandText.LimitNumberOfRows(), sqlConnection);
+            sqlConnection.Open();
+
+            // create data adapter
+            using var sqlDataAdapter = new SqlDataAdapter(cmd);
+            // this will query your database and return the result to your datatable
             sqlDataAdapter.Fill(dataTable);
         }
         catch (Exception e)

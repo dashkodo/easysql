@@ -1,96 +1,128 @@
-﻿using System.Data;
+﻿using System.ComponentModel;
 using EasySql;
 using Microsoft.Data.SqlClient;
 using Terminal.Gui;
-using Testcontainers.MsSql;
 
 public class Layout : Toplevel
 {
-    TableView tableView = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), };
-    private readonly SqlEditor sqlEditor;
-
-    private SqlExecutor sqlExecutor =
-        new SqlExecutor(new SqlConnectionStringBuilder(PlaygroundSqlServer.ConnectionString)
-            { TrustServerCertificate = true }.ToString());
+    private string[] SpinnerSequence => new[] { "⢹", "⢺", "⢼", "⣸", "⣇", "⡧", "⡗", "⡏" };
+    private int SpinnerFrame = 0;
 
     public Layout()
     {
-        sqlEditor = new SqlEditor(new SqlAutocomplete(sqlExecutor))
-        {
-            CanFocus = true,
-            Width = Dim.Fill(),
-            Height = Dim.Fill(),
-        };
-        
-
-        sqlEditor.Init(ExecuteQuery);
-        var statusBar = new StatusBar([
-            new(Application.QuitKey, "~^Q~ Quit", () => RequestStop()),
-            new(Key.CtrlMask | Key.f, "~^+F~ Format", () => sqlEditor.Format()),
-            new(Key.CtrlMask | Key.e, "~^+E~ Execute", () => ExecuteQuery()),
-        ])
+        var statusBar = new StatusBar()
         {
             Visible = true
         };
         Add(statusBar);
 
-        // Create a left pane
-        // var leftPane = new FrameView()
-        // {
-        //     Title = "Catalogs",
-        //     X = 0,
-        //     Y = 0,
-        //     Width = Dim.Percent(0),
-        //     Height = Dim.Fill(1),
-        //     CanFocus = true,
-        // };
-        // leftPane.Border.LineStyle = LineStyle.Rounded;
-        // Add(leftPane);
-
-        // Create a right pane
-        var topRight = new FrameView()
+        var tabView = new HeadlessTabView()
         {
-            Title = "Query editor",
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+        };
+
+        var statusItems = new List<StatusItem>()
+        {
+            new StatusItem(Application.QuitKey, "~^Q~ Quit", () => RequestStop()),
+            new StatusItem(Key.CtrlMask | Key.f, "~^+F~ Format",
+                () => tabView.SelectedTab.View.Subviews.Single().Subviews.OfType<FrameView>().First().Subviews.OfType<SqlEditor>().Single().Format()),
+            new StatusItem(Key.CtrlMask | Key.e, "~^+E~ Execute",
+                () => ExecuteQuery(tabView.SelectedTab)),
+        };
+
+        ConfigManager.Connections
+            .Select((arg, idx) =>
+            {
+                var setFocusAction = CreateTab(tabView, arg, idx == 0);
+                var tabHotKey = (Key.F1 + (uint)idx);
+                statusItems.Add(new StatusItem(tabHotKey, $"~{tabHotKey}~ {arg.Name}",
+                    () =>
+                    {
+                        tabView.SelectedTab = tabView.Tabs.ElementAt(idx);
+                        setFocusAction();
+                    }));
+                return arg;
+            })
+            .ToArray();
+
+        statusBar.Items = statusItems.ToArray();
+
+        Add(tabView);
+    }
+
+    private Action CreateTab(HeadlessTabView tabView, Connection connection, bool setActive)
+    {
+        var sqlExecutor = new SqlExecutor(
+            new SqlConnectionStringBuilder(connection.ConnectionString)
+                { TrustServerCertificate = true }.ToString());
+        var sqlEditor = new SqlEditor(sqlExecutor, new SqlAutocomplete(sqlExecutor))
+        {
+            CanFocus = true,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+        };
+
+
+        var queryEditorPanel = new FrameView()
+        {
+            Title = $"Query editor [{connection.Name}]",
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Percent(50),
         };
-        topRight.Border.BorderStyle = BorderStyle.Rounded;
-        topRight.Add(sqlEditor);
-        Add(topRight);
 
-        var bottomRightPane = new FrameView()
+        var resultsPanel = new FrameView()
         {
             Title = "Query results",
             X = 0,
-            Y = Pos.Bottom(topRight),
+            Y = Pos.Bottom(queryEditorPanel),
             Width = Dim.Fill(),
             Height = Dim.Fill(1),
             CanFocus = false
         };
-        bottomRightPane.Border.BorderStyle = BorderStyle.Rounded;
+        queryEditorPanel.Add(sqlEditor);
+        sqlEditor.Init();
 
-        tableView.Style.ShowHorizontalHeaderOverline = true;
-        tableView.Style.ShowVerticalHeaderLines = true;
-        tableView.Style.ShowHorizontalHeaderUnderline = true;
-        tableView.Style.ShowVerticalCellLines = true;
-        tableView.Border = new Border()
+        resultsPanel.Border.BorderStyle = BorderStyle.Rounded;
+        var resultsTable = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), };
+        sqlEditor.OnExecuteQueryComplete += (result) => { resultsTable.Table = result; };
+        resultsPanel.Add(resultsTable);
+
+        var container = new View { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), };
+        container.Add(queryEditorPanel, resultsPanel);
+
+        tabView.AddTab(new TabView.Tab(connection.Name, container), setActive);
+        return () => sqlEditor.SetFocus();
+    }
+
+    private void ExecuteQuery(TabView.Tab selectedTab)
+    {
+        var resultsPanel = selectedTab.View.Subviews.First().Subviews.OfType<FrameView>().Last();
+        var sqlEditor = selectedTab.View.MostFocused as SqlEditor;
+        var title = resultsPanel.Title;
+        var worker = new BackgroundWorker { WorkerSupportsCancellation = true, WorkerReportsProgress = true };
+
+        worker.DoWork += (s, e) =>
         {
-            BorderStyle = BorderStyle.Rounded
+            var task = Task.Run(() => sqlEditor.ExecuteQuery());
+            while (!task.IsCompleted)
+            {
+                (s as BackgroundWorker).ReportProgress(0);
+                Thread.Sleep(100);
+            }
         };
-        bottomRightPane.Add(tableView);
+        worker.RunWorkerCompleted += (sender, args) => resultsPanel.Title = title;
 
-        Add(bottomRightPane);
-    }
+        worker.ProgressChanged += (_, _) =>
+        {
+            resultsPanel.Title = title + SpinnerSequence[SpinnerFrame];
+            SpinnerFrame = ++SpinnerFrame % SpinnerSequence.Length;
+        };
 
-    private void ExecuteQuery()
-    {
-        SetData(sqlExecutor.ExecuteQuery(sqlEditor.Text.ToString()));
-    }
-
-    public void SetData(DataTable dataTable)
-    {
-        tableView.Table = dataTable;
+        worker.RunWorkerAsync();
     }
 }

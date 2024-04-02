@@ -8,7 +8,9 @@ namespace EasySql;
 
 class SqlEditor : TextView
 {
- 
+    public event Action<DataTable> OnExecuteQueryComplete;
+    private readonly SqlExecutor _sqlExecutor;
+
     private Attribute blue;
     private Attribute white;
     private Attribute magenta;
@@ -24,22 +26,29 @@ class SqlEditor : TextView
         return base.OnEnter(view);
     }
 
-    public SqlEditor(IAutocomplete autocomplete) : base()
+    public SqlEditor(SqlExecutor sqlExecutor, IAutocomplete autocomplete) : base()
     {
+        _sqlExecutor = sqlExecutor;
         this.Autocomplete = autocomplete;
     }
 
-    public void Init(Action executeCommand)
+    public void Init()
     {
         //ReplaceKeyBinding(Key.Enter, Key.Enter | Key.AltMask);
         AddCommand(Command.Refresh, () =>
         {
-            executeCommand();
+            ExecuteQuery();
+            return true;
+        });
+        AddCommand(Command.Collapse, () =>
+        {
+            Format();
             return true;
         });
         ClearKeybinding(Key.e | Key.CtrlMask);
         ClearKeybinding(Key.f | Key.CtrlMask);
         AddKeyBinding(Key.Enter | Key.CtrlMask, Command.Refresh);
+        AddKeyBinding(Key.f | Key.CtrlMask, Command.Collapse);
 
 
         magenta = Driver.MakeAttribute(Color.Magenta, Color.Black);
@@ -123,5 +132,10 @@ class SqlEditor : TextView
         Text = new Formatter(Text.ToString()).Format();
     }
 
-   
+
+    public void ExecuteQuery()
+    {
+        var result = _sqlExecutor.ExecuteQuery(Text.ToString());
+        OnExecuteQueryComplete(result);
+    }
 }

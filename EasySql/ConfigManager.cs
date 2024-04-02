@@ -5,27 +5,24 @@ using Tomlyn.Model;
 
 namespace EasySql;
 
-public class PlaygroundSqlServer
+public class ConfigManager
 {
-    private static string localConnectionString;
     private static MsSqlContainer container;
+    public static List<Connection> Connections { get; private set; }
 
     public static async Task Init()
     {
-        var configFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".sqlconfig");
+        var configFilePath =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".sqlconfig");
 
         if (!File.Exists(configFilePath))
             File.WriteAllBytes(configFilePath, []);
-        
-        var model = Toml.ToModel(File.ReadAllText(configFilePath));
-        var s = ((TomlTableArray)model["Databases"])[0]["ConnectionString"] as string;
-        localConnectionString = s; // TODO: Load from config
-        if(localConnectionString == null)
-            container = await CreateSqlServerContainer();
-    }
 
-    public static string ConnectionString =>
-        localConnectionString ?? container?.GetConnectionString() ?? throw new InvalidOperationException("Run Init method first");
+        var model = Toml.ToModel(File.ReadAllText(configFilePath))["Databases"] as TomlTableArray;
+        Connections = model.Select(arg => new Connection()
+            { Name = (string)arg["Name"], ConnectionString = (string)arg["ConnectionString"] })
+            .ToList();
+    }
 
     private static async Task<MsSqlContainer> CreateSqlServerContainer()
     {
