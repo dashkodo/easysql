@@ -16,20 +16,22 @@ public class Layout : Toplevel
         };
         Add(statusBar);
 
-        var tabView = new HeadlessTabView()
+        var tabView = new TabView()
         {
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill(),
+            Height = Dim.Fill(1),
         };
+        tabView.Style.ShowTopLine = false;
+        tabView.Style.ShowBorder = false;
 
         var statusItems = new List<StatusItem>()
         {
             new StatusItem(Application.QuitKey, "~^Q~ Quit", () => RequestStop()),
-            new StatusItem(Key.CtrlMask | Key.f, "~^+F~ Format",
-                () => tabView.SelectedTab.View.Subviews.Single().Subviews.OfType<FrameView>().First().Subviews.OfType<SqlEditor>().Single().Format()),
-            new StatusItem(Key.CtrlMask | Key.e, "~^+E~ Execute",
+            new StatusItem(Key.F.WithCtrl, "~^+F~ Format",
+                () => (tabView.SelectedTab.View.MostFocused as SqlEditor).Format()),
+            new StatusItem(Key.E.WithCtrl, "~^+E~ Execute",
                 () => ExecuteQuery(tabView.SelectedTab)),
         };
 
@@ -37,23 +39,24 @@ public class Layout : Toplevel
             .Select((arg, idx) =>
             {
                 var setFocusAction = CreateTab(tabView, arg, idx == 0);
-                var tabHotKey = (Key.F1 + (uint)idx);
+                var tabHotKey = new Key(KeyCode.F1 + (uint)idx);
                 statusItems.Add(new StatusItem(tabHotKey, $"~{tabHotKey}~ {arg.Name}",
                     () =>
                     {
                         tabView.SelectedTab = tabView.Tabs.ElementAt(idx);
-                        setFocusAction();
                     }));
                 return arg;
             })
             .ToArray();
+
+        
 
         statusBar.Items = statusItems.ToArray();
 
         Add(tabView);
     }
 
-    private Action CreateTab(HeadlessTabView tabView, Connection connection, bool setActive)
+    private Action CreateTab(TabView tabView, Connection connection, bool setActive)
     {
         var sqlExecutor = new SqlExecutor(
             new SqlConnectionStringBuilder(connection.ConnectionString)
@@ -87,21 +90,27 @@ public class Layout : Toplevel
         queryEditorPanel.Add(sqlEditor);
         sqlEditor.Init();
 
-        resultsPanel.Border.BorderStyle = BorderStyle.Rounded;
+        resultsPanel.Border.BorderStyle = LineStyle.Rounded;
         var resultsTable = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), };
-        sqlEditor.OnExecuteQueryComplete += (result) => { resultsTable.Table = result; };
+        sqlEditor.OnExecuteQueryComplete += (result) => { resultsTable.Table = new DataTableSource(result); };
         resultsPanel.Add(resultsTable);
 
         var container = new View { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), };
         container.Add(queryEditorPanel, resultsPanel);
 
-        tabView.AddTab(new TabView.Tab(connection.Name, container), setActive);
+        var tab = new Tab() { Title = connection.Name, View = container };
+        tabView.AddTab(tab, setActive);
+        tab.VisibleChanged += (arg, evt) =>
+        {
+            var sqlEditor = (arg as Tab).View.Subviews.First().Subviews.First();
+            sqlEditor.SetFocus();
+        };
         return () => sqlEditor.SetFocus();
     }
 
-    private void ExecuteQuery(TabView.Tab selectedTab)
+    private void ExecuteQuery(Tab selectedTab)
     {
-        var resultsPanel = selectedTab.View.Subviews.First().Subviews.OfType<FrameView>().Last();
+        var resultsPanel = selectedTab.View.Subviews.OfType<FrameView>().Last();
         var sqlEditor = selectedTab.View.MostFocused as SqlEditor;
         var title = resultsPanel.Title;
         var worker = new BackgroundWorker { WorkerSupportsCancellation = true, WorkerReportsProgress = true };

@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using System.Text;
 using Terminal.Gui;
-using Rune = System.Rune;
+using Rune = System.Text.Rune;
 
 namespace EasySql;
 
@@ -75,6 +75,8 @@ public class SqlAutocomplete : TextViewAutocomplete
         "exists",
     };
 
+    private IEnumerable<string> AllSuggestions = [];
+
     public SqlAutocomplete(SqlExecutor sqlExecutor)
     {
         new Thread(() =>
@@ -91,7 +93,7 @@ public class SqlAutocomplete : TextViewAutocomplete
                         ColumnName = arg["COLUMN_NAME"],
                     });
                 
-                AllSuggestions.AddRange(
+            AllSuggestions  = new List<string>(
                     columns.Select(arg => "." + arg.ColumnName).Distinct()
                         .Concat(columns.Select(arg => arg.ColumnName).Distinct())
                         .Concat(columns.Select(arg => arg.TableName).Distinct())
@@ -101,56 +103,5 @@ public class SqlAutocomplete : TextViewAutocomplete
             }).Start();
 
         this.MaxWidth = 50;
-    }
-
-    protected override string IdxToWord(List<Rune> line, int idx, int columnOffset = 0)
-    {
-        StringBuilder sb = new StringBuilder();
-        var endIdx = idx;
-
-        // get the ending word index
-        while (endIdx < line.Count)
-        {
-            if (IsWordChar(line[endIdx]))
-            {
-                endIdx++;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        // It isn't a word char then there is no way to autocomplete that word
-        if (endIdx == idx && columnOffset != 0)
-        {
-            return null;
-        }
-
-        // we are at the end of a word.  Work out what has been typed so far
-
-        var prevIsDot = false;
-        while (endIdx-- > 0)
-        {
-            if (IsWordChar(line[endIdx]))
-            {
-                if (prevIsDot)
-                    break;
-
-                sb.Insert(0, (char)line[endIdx]);
-            }
-            else
-            {
-                if (line[endIdx] == '.')
-                {
-                    prevIsDot = true;
-                    sb.Insert(0, (char)line[endIdx]);
-                }
-                else
-                    break;
-            }
-        }
-
-        return sb.ToString();
     }
 }

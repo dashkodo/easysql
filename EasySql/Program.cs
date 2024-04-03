@@ -6,7 +6,7 @@ await EasySql.ConfigManager.Init();
 Console.WriteLine("initialized sql");
 
 Application.Init();
-Application.QuitKey = Key.Q | Key.CtrlMask;
+Application.QuitKey = Key.Q.WithCtrl;
 //ThemeManager.Instance.Theme = "Dark";
 
 Application.Run<Layout>();
